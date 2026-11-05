@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Canvas Course Exporter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root {
+    --bg: #FFFFFF; --surface: #FFFFFF; --sunken: #F5F7FA; --ink: #172036; --muted: #5B6478;
+    --line: #DCE1EA; --accent: #2846C8; --accent-ink: #FFFFFF; --accent-soft: #E8ECFB;
+    --ok: #157F5B; --ok-soft: #E4F4EC; --warn: #A15C07; --warn-soft: #FCF1DE;
+    --bad: #B42318; --bad-soft: #FDECEA; --info: #3B5BDB;
+    --radius: 10px; --sidebar: 340px;
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5;
+         font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+  button, input, select { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .hidden { display: none !important; }
+
+  /* ---------- connect screen ---------- */
+  .connect { min-height: 100%; display: grid; place-items: center; padding: 32px 20px; }
+  .connect-box { width: 100%; max-width: 440px; }
+  .connect-box h1 { font-size: 28px; line-height: 1.2; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .connect-box > p { color: var(--muted); margin: 0 0 28px; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-weight: 500; margin-bottom: 6px; }
+  .field small { display: block; color: var(--muted); margin-top: 6px; font-size: 12.5px; }
+  input[type=text], input[type=password], input[type=search], select {
+    width: 100%; height: 40px; padding: 0 12px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 8px; transition: border-color .15s; }
+  input:hover, select:hover { border-color: color-mix(in srgb, var(--line), var(--ink) 25%); }
+  input:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn { height: 40px; padding: 0 16px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface);
+         cursor: pointer; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .btn:hover { background: var(--sunken); }
+  a.btn { text-decoration: none; color: var(--ink); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.block { width: 100%; justify-content: center; height: 46px; font-size: 15px; }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+  .btn.ghost:hover { color: var(--ink); background: var(--sunken); }
+  .btn.sm { height: 32px; padding: 0 12px; font-size: 13px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+  .error { color: var(--bad); background: var(--bad-soft); border-radius: 8px; padding: 10px 12px; margin-top: 14px; font-size: 13.5px; }
+  .secure { display: flex; gap: 10px; margin-top: 22px; color: var(--muted); font-size: 12.5px; }
+  .secure svg { flex: none; margin-top: 2px; }
+
+  /* ---------- workspace ---------- */
+  .app { display: grid; grid-template-columns: var(--sidebar) 1fr; grid-template-rows: auto 1fr; height: 100vh; }
+  .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 56px;
+            background: var(--surface); border-bottom: 1px solid var(--line); }
+  .brand { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px; }
+  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+  .conn { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; min-width: 0; }
+  .conn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
+  .conn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  aside { background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
+  .side-scroll { overflow: auto; padding: 20px; flex: 1; }
+  .side-section + .side-section { margin-top: 24px; }
+  .side-section h2 { font-size: 13px; font-weight: 600; margin: 0 0 4px; }
+  .side-section > p { margin: 0 0 12px; color: var(--muted); font-size: 12.5px; }
+  .opt { display: grid; grid-template-columns: 20px 1fr; gap: 10px; padding: 10px 12px; border: 1px solid var(--line);
+         border-radius: 9px; cursor: pointer; margin-bottom: 8px; transition: border-color .15s, background .15s; }
+  .opt:hover { border-color: color-mix(in srgb, var(--line), var(--accent) 40%); }
+  .opt:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+  .opt input { margin: 3px 0 0; accent-color: var(--accent); width: 16px; height: 16px; }
+  .opt b { font-weight: 500; display: block; }
+  .opt span { color: var(--muted); font-size: 12.5px; line-height: 1.4; display: block; }
+  .opt code { font-size: 11.5px; }
+  .presets { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .chip { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+          cursor: pointer; font-size: 12.5px; color: var(--muted); }
+  .chip:hover { color: var(--ink); border-color: var(--accent); }
+
+  .side-foot { border-top: 1px solid var(--line); padding: 16px 20px 20px; background: var(--surface); }
+  .plan { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 40px; }
+  .plan strong { color: var(--ink); font-size: 22px; font-weight: 600; display: block; line-height: 1.2; letter-spacing: -0.01em; }
+
+  main { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
+  .tabs { display: flex; gap: 4px; padding: 12px 20px 0; border-bottom: 1px solid var(--line); background: #fff; }
+  .tab { border: 0; background: none; padding: 10px 14px 12px; cursor: pointer; color: var(--muted); font-weight: 500;
+         border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; gap: 8px; align-items: center; }
+  .tab[aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+  .badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--ink);
+           font-size: 11.5px; display: inline-grid; place-items: center; font-weight: 600; }
+  .tab[aria-selected=true] .badge { background: var(--accent); color: var(--accent-ink); }
+  .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 20px 20px; gap: 12px; }
+
+  .filters { display: grid; grid-template-columns: minmax(200px, 2fr) repeat(3, minmax(140px, 1fr)) auto; gap: 8px; }
+  .facts { display: flex; gap: 24px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+  .facts b { color: var(--ink); font-weight: 600; }
+
+  .table-card { flex: 1; min-height: 0; overflow: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  th { position: sticky; top: 0; z-index: 1; background: var(--surface); text-align: left; font-weight: 500; font-size: 12.5px;
+       color: var(--muted); padding: 10px 12px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th[data-k] { cursor: pointer; }
+  th[data-k]:hover { color: var(--ink); }
+  th .arrow { opacity: .6; margin-left: 3px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover td { background: var(--sunken); }
+  tr.sel td { background: var(--accent-soft) !important; }
+  .num { text-align: right; }
+  td.check, th.check { width: 40px; padding-right: 0; }
+  td input[type=checkbox], th input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+  .cname { font-weight: 500; }
+  .sub { color: var(--muted); font-size: 12.5px; }
+  .details-btn { border: 0; background: none; color: var(--info); cursor: pointer; font-size: 12.5px; padding: 0; }
+  .counts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .counts span { background: var(--sunken); border: 1px solid var(--line); border-radius: 6px; padding: 1px 7px; font-size: 12px; color: var(--muted); }
+  .counts b { color: var(--ink); font-weight: 600; }
+
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; white-space: nowrap; }
+  .status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .s-available, .s-done { color: var(--ok); }
+  .s-created, .s-claimed, .s-queued { color: var(--muted); }
+  .s-completed { color: var(--info); }
+  .s-deleted, .s-failed { color: var(--bad); }
+  .s-requesting, .s-exporting, .s-downloading, .s-verifying, .s-collecting { color: var(--warn); }
+  .s-requesting::before, .s-exporting::before, .s-downloading::before, .s-collecting::before { animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: .25; } }
+
+  .bar { height: 6px; background: var(--sunken); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; width: 120px; }
+  .bar i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  .s-row-done .bar i { background: var(--ok); }
+  .s-row-failed .bar i { background: var(--bad); }
+
+  .queue-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .queue-head .facts { margin-right: auto; }
+  .empty { padding: 56px 20px; text-align: center; color: var(--muted); }
+  .empty b { display: block; color: var(--ink); font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+  .note-warn { color: var(--warn); }
+  .note-bad { color: var(--bad); }
+  .path { font-size: 12px; color: var(--muted); word-break: break-all; }
+
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none;
+           background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 8px; font-size: 13.5px;
+           transition: opacity .2s, transform .2s; z-index: 10; max-width: 90vw; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .loading { padding: 40px; text-align: center; color: var(--muted); }
+
+  /* selection bar */
+  .selbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: 9px;
+            background: var(--accent-soft); color: var(--ink); font-size: 13.5px; }
+  .selbar b { font-weight: 600; }
+  .selbar .btn { margin-left: auto; }
+  .selbar .btn + .btn { margin-left: 0; }
+
+  /* plan breakdown */
+  .breakdown { list-style: none; margin: 10px 0 0; padding: 0; font-size: 12.5px; max-height: 170px; overflow: auto; }
+  .breakdown li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .breakdown li span { color: var(--muted); grid-column: 1 / -1; font-size: 12px; }
+  .breakdown li b { font-weight: 500; color: var(--ink); }
+  .breakdown li em { font-style: normal; font-weight: 600; color: var(--accent); }
+
+  /* queue filters */
+  .qfilters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .qchip { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; cursor: pointer;
+           font-size: 13px; display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+  .qchip b { color: var(--ink); font-weight: 600; }
+  .qchip[aria-pressed=true] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  #qtype { width: auto; min-width: 200px; height: 32px; font-size: 13px; }
+  .jobrow { cursor: pointer; }
+  .jobrow td:first-child .cname::before { content: "▸"; display: inline-block; width: 14px; color: var(--muted); transition: transform .15s; }
+  .jobrow.open td:first-child .cname::before { transform: rotate(90deg); }
+  .jobdetail td { background: var(--sunken); padding: 12px 16px 14px 28px; }
+  .files { width: 100%; max-width: 760px; }
+  .files td { background: transparent !important; border-bottom: 1px solid var(--line); padding: 7px 10px 7px 0; }
+  .files tr:last-child td { border-bottom: 0; }
+  .linkbtn { border: 0; background: none; color: var(--info); cursor: pointer; padding: 0; font-size: 13px; text-decoration: none; }
+  .linkbtn:hover { text-decoration: underline; }
+  .row-actions { display: flex; gap: 14px; align-items: center; }
+
+  /* drawer */
+  .scrim { position: fixed; inset: 0; background: rgba(23, 32, 54, .28); z-index: 20; opacity: 0; transition: opacity .2s; }
+  .scrim.show { opacity: 1; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 96vw); background: #fff; z-index: 21;
+            border-left: 1px solid var(--line); display: flex; flex-direction: column; transform: translateX(100%);
+            transition: transform .22s ease-out; box-shadow: -12px 0 32px rgba(23, 32, 54, .08); }
+  .drawer.show { transform: none; }
+  .drawer-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
+  .drawer-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
+  .drawer-head .sub { margin-top: 2px; }
+  .drawer-head .close { margin-left: auto; }
+  .drawer-tools { padding: 12px 22px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; border-bottom: 1px solid var(--line); }
+  .drawer-tools input[type=search] { max-width: 280px; height: 34px; }
+  .drawer-tools select { width: auto; height: 34px; }
+  .drawer-tools .rolechips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .drawer-body { flex: 1; overflow: auto; }
+  .drawer-body table td, .drawer-body table th { white-space: nowrap; font-size: 13px; }
+  .drawer-body th { background: #fff; }
+
+  @media (max-width: 960px) {
+    .app { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; height: auto; min-height: 100vh; }
+    aside { border-right: 0; border-bottom: 1px solid var(--line); }
+    .filters { grid-template-columns: 1fr 1fr; }
+    .filters > :first-child { grid-column: 1 / -1; }
+    .table-card { min-height: 60vh; }
+    .hide-sm { display: none; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ================= Connect ================= -->
+<div class="connect" id="connectView">
+  <form class="connect-box" id="connectForm" autocomplete="off">
+    <div class="brand-mark" style="width:36px;height:36px;border-radius:9px;margin-bottom:20px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
+    <h1>Export courses from Canvas</h1>
+    <p>Connect with an admin token to see every course in your account, then export course content, people, grades and discussions in one go.</p>
+    <div class="field">
+      <label for="baseUrl">Canvas address</label>
+      <input type="text" id="baseUrl" placeholder="https://canvas.yourorg.edu" inputmode="url" spellcheck="false">
+    </div>
+    <div class="field">
+      <label for="token">Access token</label>
+      <input type="password" id="token" placeholder="Paste your token" spellcheck="false">
+      <small>In Canvas, go to Account, Settings, then New access token.</small>
+    </div>
+    <button class="btn primary block" id="btnConnect" type="submit">Connect</button>
+    <div class="error hidden" id="connectErr" role="alert"></div>
+    <div class="secure">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <span>Your token is kept in an encrypted cookie that page scripts can't read. It expires after 8 hours and is removed when you disconnect or lock the app.</span>
+    </div>
+  </form>
+</div>
+
+<!-- ================= Workspace ================= -->
+<div class="app hidden" id="appView">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
+      Canvas Course Exporter
+    </div>
+    <div class="conn"><i class="dot"></i><span id="who"></span></div>
+    <button class="btn sm" id="btnDisconnect">Disconnect</button>
+    <button class="btn sm ghost" id="btnLock" title="Lock the app">Lock</button>
+  </header>
+
+  <aside>
+    <div class="side-scroll">
+      <div class="side-section">
+        <h2>What to export</h2>
+        <p>Each choice is saved for every selected course.</p>
+        <div class="presets">
+          <button class="chip" data-preset="archive">Full archive</button>
+          <button class="chip" data-preset="move">Move to new Canvas</button>
+          <button class="chip" data-preset="records">Records only</button>
+        </div>
+      </div>
+
+      <div class="side-section" id="optContent">
+        <h2>Course content</h2>
+        <p>Packaged by Canvas.</p>
+        <label class="opt"><input type="checkbox" value="common_cartridge" checked>
+          <div><b>Course package</b><span>Modules, pages, assignments, quizzes, files and settings. Import this file into any Canvas. <code>.imscc</code></span></div></label>
+        <label class="opt"><input type="checkbox" value="zip">
+          <div><b>Course files</b><span>Every uploaded file as a plain folder tree. <code>.zip</code></span></div></label>
+        <label class="opt"><input type="checkbox" value="qti">
+          <div><b>Quizzes for other systems</b><span>Quizzes and question banks in QTI format.</span></div></label>
+      </div>
+
+      <div class="side-section" id="optData">
+        <h2>People and records</h2>
+        <p>Not included in the course package. Saved as spreadsheets (CSV).</p>
+        <label class="opt"><input type="checkbox" value="people">
+          <div><b>People</b><span>Everyone enrolled, with role, section, email, last activity and final grade. Also sections and groups.</span></div></label>
+        <label class="opt"><input type="checkbox" value="grades">
+          <div><b>Grades and submissions</b><span>Full gradebook, every submission with score and dates, and teacher comments.</span></div></label>
+        <label class="opt"><input type="checkbox" value="discussions">
+          <div><b>Discussions and announcements</b><span>Every topic, post and reply, with author and date.</span></div></label>
+        <label class="opt"><input type="checkbox" value="quiz_results">
+          <div><b>Quiz results</b><span>Each student's attempts, scores and time spent. Classic Quizzes only.</span></div></label>
+      </div>
+
+      <div class="side-section" id="saveSection">
+        <h2>Where to save</h2>
+        <p>Exports run in this browser tab. Keep it open until they finish.</p>
+        <label class="opt" id="optFolder"><input type="radio" name="savemode" value="folder">
+          <div><b>Into a folder on this computer</b><span>Everything is saved straight into a folder you choose, sorted by term and course. Works in Chrome and Edge.</span></div></label>
+        <label class="opt"><input type="radio" name="savemode" value="download">
+          <div><b>As downloads</b><span>Course packages go to your Downloads folder one by one. People and records are collected into one .zip you download at the end.</span></div></label>
+        <div class="row-actions" id="folderRow"><button class="btn sm" id="btnFolder">Choose folder</button><span class="sub" id="folderName">No folder chosen</span></div>
+      </div>
+
+      <div class="side-section hidden" id="acctSection">
+        <h2>Whole account</h2>
+        <p>Every user in the account, not just one course: name, login, SIS ID, email and last login.</p>
+        <button class="btn sm" id="btnAcctUsers">Export all users</button>
+      </div>
+    </div>
+    <div class="side-foot">
+      <div class="plan" id="plan"></div>
+      <ul class="breakdown" id="breakdown"></ul>
+      <button class="btn primary block" id="btnExport" disabled>Export</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="courses">Courses <span class="badge" id="badgeCourses">0</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="queue">Exports <span class="badge" id="badgeQueue">0</span></button>
+    </div>
+
+    <!-- Courses -->
+    <section class="panel" id="tab-courses">
+      <div class="filters">
+        <input type="search" id="search" placeholder="Search by course, code, SIS ID or teacher" aria-label="Search courses">
+        <select id="account" aria-label="Account"></select>
+        <select id="stateSel" aria-label="Course state to load">
+          <option value="all">All courses</option>
+          <option value="available">Published</option>
+          <option value="created">Unpublished</option>
+          <option value="completed">Concluded</option>
+          <option value="deleted">Deleted</option>
+        </select>
+        <select id="termFilter" aria-label="Term"></select>
+        <button class="btn" id="btnReload" title="Reload from Canvas">Reload</button>
+      </div>
+      <div class="facts" id="facts"></div>
+      <div class="selbar hidden" id="selbar"></div>
+      <div class="table-card" id="courseCard">
+        <table>
+          <thead><tr>
+            <th class="check"><input type="checkbox" id="chkAll" aria-label="Select all shown courses"></th>
+            <th data-k="name">Course</th>
+            <th data-k="term">Term</th>
+            <th data-k="state">State</th>
+            <th data-k="students" class="num">Students</th>
+            <th data-k="storage_mb" class="num hide-sm">Storage</th>
+            <th data-k="teachers" class="hide-sm">Teachers</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Queue -->
+    <section class="panel hidden" id="tab-queue">
+      <div class="queue-head">
+        <div class="qfilters" id="qfilters"></div>
+        <select id="qtype" aria-label="Filter by export type"></select>
+        <span style="flex:1"></span>
+        <button class="btn sm" id="btnRetry">Retry failed</button>
+        <button class="btn sm" id="btnZip">Download records (.zip)</button>
+        <button class="btn sm" id="btnManifest">Download manifest</button>
+      </div>
+      <div class="path" id="saveNote"></div>
+      <div class="table-card">
+        <table>
+          <thead><tr><th>Course</th><th>Export</th><th>Status</th><th class="hide-sm">Progress</th><th class="num">Size</th><th>Result</th></tr></thead>
+          <tbody id="jobBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim hidden" id="scrim"></div>
+<aside class="drawer hidden" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawerTitle">
+  <div class="drawer-head">
+    <div><h3 id="drawerTitle"></h3><div class="sub" id="drawerSub"></div></div>
+    <button class="btn sm close" id="drawerClose">Close</button>
+  </div>
+  <div class="drawer-tools" id="drawerTools"></div>
+  <div class="drawer-body" id="drawerBody"></div>
+</aside>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// ======================================================================
+// Canvas Course Exporter (Vercel edition). All export work runs here.
+// ======================================================================
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmtBytes = b => !b ? "" : b < 1024 ? b + " B" : b < 1048576 ? (b/1024).toFixed(0) + " KB" : b < 1073741824 ? (b/1048576).toFixed(1) + " MB" : (b/1073741824).toFixed(2) + " GB";
+const fmtMB = mb => mb == null ? "" : mb >= 1024 ? (mb/1024).toFixed(1) + " GB" : Number(mb).toFixed(mb < 10 ? 1 : 0) + " MB";
+const n = x => Number(x || 0).toLocaleString();
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Math.random().toString(36).slice(2, 12);
+const safe = (s, max = 60) => (String(s || "").replace(/[^A-Za-z0-9._-]+/g, "_").replace(/^_+|_+$/g, "") || "untitled").slice(0, max);
+const nowStr = () => new Date().toISOString().replace("T", " ").slice(0, 19);
+const text = h => { if (!h) return ""; const d = document.createElement("div");
+  d.innerHTML = String(h).replace(/<br\s*\/?>|<\/p>|<\/div>|<\/li>/gi, "\n"); return (d.textContent || "").replace(/\n{3,}/g, "\n\n").trim(); };
+
+const STATE_LABEL = {available: "Published", created: "Unpublished", claimed: "Unpublished", completed: "Concluded", deleted: "Deleted"};
+const TYPE_LABEL = {common_cartridge: "Course package", zip: "Course files", qti: "Quizzes (QTI)", people: "People",
+  grades: "Grades and submissions", discussions: "Discussions", quiz_results: "Quiz results", account_users: "All account users"};
+const JOB_LABEL = {queued: "Waiting", requesting: "Starting", exporting: "Canvas is packaging", downloading: "Downloading",
+  verifying: "Checking file", collecting: "Collecting records", saving: "Saving", done: "Done", failed: "Failed"};
+const PRESETS = {archive: ["common_cartridge", "zip", "people", "grades", "discussions", "quiz_results"],
+  move: ["common_cartridge"], records: ["people", "grades", "discussions", "quiz_results"]};
+const CONTENT = {common_cartridge: "course.imscc", zip: "files.zip", qti: "quizzes_qti.zip"};
+const PARALLEL = 3, POLL_MS = 4000, EXPORT_TIMEOUT_MS = 3 * 3600 * 1000;
+
+let courses = [], selected = new Set(), sortKey = "name", sortDir = 1, accountId = "";
+let onlySelected = false, qStatus = "all", qType = "", openJobs = new Set();
+let saveMode = window.showDirectoryPicker ? "folder" : "download", rootDir = null;
+const jobs = [], queue = []; let running = 0;
+const manifest = [];
+
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 4000); }
+function showErr(el, msg) { el.textContent = msg; el.classList.toggle("hidden", !msg); }
+
+// ---------------------------------------------------------------- server calls
+async function api(path, body) {
+  for (let attempt = 0; ; attempt++) {
+    let r;
+    try {
+      r = await fetch(path, {method: body === undefined ? "GET" : "POST", credentials: "same-origin",
+        headers: {"Content-Type": "application/json", "X-Requested-With": "fetch"},
+        body: body === undefined ? undefined : JSON.stringify(body)});
+    } catch (e) {
+      if (attempt < 4) { await sleep(1000 * 2 ** attempt); continue; }
+      throw new Error("Can't reach the exporter. Check your internet connection.");
+    }
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 401 && /Locked/.test(data.error || "")) { location.reload(); throw new Error("Locked"); }
+    if ([429, 502, 503, 504].includes(r.status) && attempt < 4) { await sleep(1500 * 2 ** attempt); continue; }
+    if (!r.ok) { const e = new Error(data.error || `Request failed (HTTP ${r.status})`); e.status = data.status || r.status; throw e; }
+    return data;
+  }
+}
+const cv = body => api("/api/canvas", body);
+async function paginate(path, params = [], key = null) {
+  const out = [], take = d => out.push(...(key ? (d[key] || []) : d));
+  let r = await cv({path, params: [...params, ["per_page", 100]]}); take(r.data);
+  while (r.next) { r = await cv({url: r.next}); take(r.data); }
+  return out;
+}
+
+// ---------------------------------------------------------------- connect
+try { if (!$("#baseUrl").value) $("#baseUrl").value = localStorage.getItem("canvasUrl") || ""; } catch (e) {}
+function enterApp(user, base, accounts) {
+  $("#who").textContent = `${user} on ${base.replace(/^https?:\/\//, "")}`;
+  $("#account").innerHTML = accounts.length ? accounts.map(a => `<option value="${a.id}">${esc(a.name)}</option>`).join("")
+    : `<option value="">My courses</option>`;
+  $("#acctSection").classList.toggle("hidden", !accounts.length);
+  $("#connectView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  setupSaveMode(); loadCourses(); renderJobs();
+}
+$("#connectForm").onsubmit = async e => {
+  e.preventDefault(); showErr($("#connectErr"), "");
+  const b = $("#btnConnect"); b.disabled = true; b.textContent = "Connecting";
+  try {
+    const d = await api("/api/connect", {base_url: $("#baseUrl").value, token: $("#token").value});
+    try { localStorage.setItem("canvasUrl", d.base_url); } catch (e) {}
+    $("#token").value = ""; enterApp(d.user, d.base_url, d.accounts);
+  } catch (err) { showErr($("#connectErr"), err.message); }
+  b.disabled = false; b.textContent = "Connect";
+};
+(async () => {   // already connected in this browser? skip the form
+  try {
+    const s = await api("/api/status"); if (!s.connected) return;
+    const me = (await cv({path: "/users/self"})).data;
+    let accounts = []; try { accounts = (await cv({path: "/accounts", params: [["per_page", 100]]})).data.map(a => ({id: a.id, name: a.name})); } catch (e) {}
+    enterApp(me.name, s.base_url, accounts);
+  } catch (e) {}
+})();
+function busy() { return jobs.some(j => !["done", "failed"].includes(j.status)); }
+$("#btnDisconnect").onclick = async () => { if (busy() && !confirm("Exports are still running. Disconnect anyway?")) return; await api("/api/disconnect", {}); location.reload(); };
+$("#btnLock").onclick = async () => { if (busy() && !confirm("Exports are still running. Lock anyway?")) return; await api("/api/lock", {}); location.reload(); };
+window.addEventListener("beforeunload", e => { if (busy()) { e.preventDefault(); e.returnValue = ""; } });
+
+// ---------------------------------------------------------------- tabs
+function showTab(name) {
+  $$(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.tab === name));
+  $("#tab-courses").classList.toggle("hidden", name !== "courses");
+  $("#tab-queue").classList.toggle("hidden", name !== "queue");
+}
+$$(".tab").forEach(t => t.onclick = () => showTab(t.dataset.tab));
+
+// ---------------------------------------------------------------- where to save
+function setupSaveMode() {
+  if (!window.showDirectoryPicker) {
+    const o = $("#optFolder"); o.querySelector("input").disabled = true; o.style.opacity = .55;
+    o.querySelector("span").textContent = "Needs Chrome or Edge. Open this page in one of those to use it.";
+  }
+  $$("input[name=savemode]").forEach(r => { r.checked = r.value === saveMode; r.onchange = () => { saveMode = r.value; updateSaveUI(); }; });
+  updateSaveUI();
+}
+function updateSaveUI() {
+  $("#folderRow").classList.toggle("hidden", saveMode !== "folder");
+  $("#folderName").textContent = rootDir ? `Saving into “${rootDir.name}”` : "No folder chosen yet";
+  $("#saveNote").textContent = saveMode === "folder"
+    ? (rootDir ? `Saving into the folder “${rootDir.name}”. Keep this tab open while exports run.` : "You'll be asked to choose a folder when you start.")
+    : "Course packages go to your Downloads folder. Records stay here until you click Download records. Keep this tab open while exports run.";
+}
+async function pickFolder() {
+  try { rootDir = await window.showDirectoryPicker({id: "canvas-exports", mode: "readwrite"}); } catch (e) { /* cancelled */ }
+  updateSaveUI(); return !!rootDir;
+}
+$("#btnFolder").onclick = pickFolder;
+async function folderReady() {
+  if (saveMode !== "folder") return true;
+  if (!rootDir && !(await pickFolder())) return false;
+  try { return (await rootDir.requestPermission({mode: "readwrite"})) === "granted"; } catch (e) { return false; }
+}
+async function writeFile(parts, name, data) {
+  let d = rootDir; for (const p of parts) d = await d.getDirectoryHandle(p, {create: true});
+  const w = await (await d.getFileHandle(name, {create: true})).createWritable();
+  await w.write(data); await w.close();
+}
+function downloadBlob(name, blob) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000);
+}
+function browserDownload(url) {  // cross-origin file: let the browser fetch it itself
+  const f = document.createElement("iframe"); f.style.display = "none"; f.src = url;
+  document.body.appendChild(f); setTimeout(() => f.remove(), 120000);
+}
+
+// ---------------------------------------------------------------- courses
+$("#btnReload").onclick = loadCourses; $("#account").onchange = loadCourses; $("#stateSel").onchange = loadCourses;
+function normalize(c) {
+  const t = c.term || {};
+  return {id: c.id, name: c.name || "", course_code: c.course_code || "", sis_course_id: c.sis_course_id || "",
+    state: c.workflow_state || "", term: t.name || "", students: c.total_students, storage_mb: c.storage_quota_used_mb,
+    teachers: (c.teachers || []).map(x => x.display_name).join(", "), account: c.account_name || ""};
+}
+async function loadCourses() {
+  accountId = $("#account").value;
+  $("#tbody").innerHTML = `<tr><td colspan="7" class="loading">Loading courses from Canvas. Large accounts can take a minute.</td></tr>`;
+  $("#facts").innerHTML = "";
+  try {
+    let st = $("#stateSel").value, raw;
+    if (accountId) {
+      const states = st === "all" ? ["created", "claimed", "available", "completed"] : [st];
+      raw = await paginate(`/accounts/${accountId}/courses`, [
+        ...["term", "total_students", "teachers", "storage_quota_used_mb", "account_name"].map(i => ["include[]", i]),
+        ...states.map(s => ["state[]", s])]);
+    } else {
+      raw = await paginate("/courses", [...["term", "total_students", "teachers"].map(i => ["include[]", i]),
+        ...["unpublished", "available", "completed"].map(s => ["state[]", s])]);
+    }
+    courses = raw.filter(c => c.id).map(normalize); selected.clear();
+    const terms = [...new Set(courses.map(c => c.term || "No term"))].sort();
+    $("#termFilter").innerHTML = `<option value="">All terms</option>` + terms.map(t => `<option>${esc(t)}</option>`).join("");
+    render();
+  } catch (err) { $("#tbody").innerHTML = `<tr><td colspan="7"><div class="error">${esc(err.message)}</div></td></tr>`; }
+}
+function filtered() {
+  const q = $("#search").value.trim().toLowerCase(), t = $("#termFilter").value;
+  return courses.filter(c => (!onlySelected || selected.has(c.id)) && (!t || (c.term || "No term") === t) &&
+    (!q || [c.name, c.course_code, c.sis_course_id, c.teachers, String(c.id)].some(v => (v || "").toLowerCase().includes(q))))
+  .sort((a, b) => { const x = a[sortKey] ?? "", y = b[sortKey] ?? "";
+    return (typeof x === "number" || typeof y === "number" ? (Number(x) || 0) - (Number(y) || 0) : String(x).localeCompare(String(y))) * sortDir; });
+}
+function render() {
+  const rows = filtered();
+  $("#tbody").innerHTML = rows.map(c => `
+    <tr class="${selected.has(c.id) ? "sel" : ""}">
+      <td class="check"><input type="checkbox" class="chk" data-id="${c.id}" ${selected.has(c.id) ? "checked" : ""} aria-label="Select ${esc(c.name)}"></td>
+      <td><div class="cname">${esc(c.name)}</div>
+        <div class="sub">${esc([c.course_code, c.sis_course_id && "SIS " + c.sis_course_id, "ID " + c.id].filter(Boolean).join(", "))}</div>
+        <div class="row-actions" style="margin-top:4px"><button class="linkbtn" data-people="${c.id}">View people</button><button class="linkbtn" data-sum="${c.id}">Show contents</button></div>
+        <div class="counts" id="det-${c.id}"></div></td>
+      <td>${esc(c.term || "")}</td>
+      <td><span class="status s-${esc(c.state)}">${esc(STATE_LABEL[c.state] || c.state)}</span></td>
+      <td class="num">${c.students ?? ""}</td>
+      <td class="num hide-sm">${fmtMB(c.storage_mb)}</td>
+      <td class="sub hide-sm">${esc(c.teachers)}</td>
+    </tr>`).join("") || `<tr><td colspan="7"><div class="empty"><b>No courses match</b>Try a different search or term, or load another course state.</div></td></tr>`;
+  $$("th[data-k]").forEach(th => { th.querySelector(".arrow")?.remove(); if (th.dataset.k === sortKey) th.insertAdjacentHTML("beforeend", `<span class="arrow">${sortDir > 0 ? "▲" : "▼"}</span>`); });
+  $("#chkAll").checked = rows.length > 0 && rows.every(c => selected.has(c.id));
+  $("#chkAll").indeterminate = !$("#chkAll").checked && rows.some(c => selected.has(c.id));
+  const mb = courses.reduce((s, c) => s + (Number(c.storage_mb) || 0), 0);
+  $("#facts").innerHTML = `<span><b>${n(courses.length)}</b> courses</span><span><b>${n(rows.length)}</b> shown</span>` +
+    `<span><b>${n(courses.reduce((s, c) => s + (c.students || 0), 0))}</b> student enrollments</span>` + (mb ? `<span><b>${fmtMB(mb)}</b> total storage</span>` : "");
+  const selShown = rows.filter(c => selected.has(c.id)).length, bar = $("#selbar");
+  if (selected.size) {
+    const st = courses.filter(c => selected.has(c.id)).reduce((a, c) => a + (c.students || 0), 0);
+    bar.innerHTML = `<span><b>${n(selected.size)}</b> course${selected.size > 1 ? "s" : ""} selected` +
+      (selShown !== selected.size ? ` (${n(selShown)} in this view)` : "") + `, <b>${n(st)}</b> student enrollments` +
+      (chosenTypes().length ? `, <b>${n(selected.size * chosenTypes().length)}</b> exports ready` : "") + `</span>` +
+      `<button class="btn sm" id="selShow">${onlySelected ? "Show all" : "Show only selected"}</button><button class="btn sm" id="selClear">Clear selection</button>`;
+    bar.classList.remove("hidden");
+    $("#selClear").onclick = () => { selected.clear(); render(); };
+    $("#selShow").onclick = () => { onlySelected = !onlySelected; render(); };
+  } else { bar.classList.add("hidden"); onlySelected = false; }
+  $("#badgeCourses").textContent = selected.size ? `${n(selected.size)} selected` : n(courses.length);
+  updatePlan();
+}
+$("#tbody").addEventListener("change", e => {
+  if (!e.target.classList.contains("chk")) return;
+  const id = Number(e.target.dataset.id); e.target.checked ? selected.add(id) : selected.delete(id); render();
+});
+$("#tbody").addEventListener("click", async e => {
+  if (e.target.dataset.people) { openPeople(Number(e.target.dataset.people)); return; }
+  const id = e.target.dataset.sum; if (!id) return;
+  const box = $("#det-" + id); e.target.remove(); box.innerHTML = `<span>Counting</span>`;
+  const out = [];
+  for (const [k, p] of [["modules", "modules"], ["pages", "pages"], ["assignments", "assignments"], ["discussions", "discussion_topics"], ["quizzes", "quizzes"], ["files", "files"]]) {
+    try { out.push([k, (await paginate(`/courses/${id}/${p}`)).length]); } catch (err) { out.push([k, null]); }
+    box.innerHTML = out.map(([k, v]) => `<span><b>${v ?? "n/a"}</b> ${k}</span>`).join("");
+  }
+});
+$("#chkAll").onchange = e => { filtered().forEach(c => e.target.checked ? selected.add(c.id) : selected.delete(c.id)); render(); };
+["#search", "#termFilter"].forEach(s => $(s).addEventListener("input", render));
+$$("th[data-k]").forEach(th => th.onclick = () => { const k = th.dataset.k; sortDir = sortKey === k ? -sortDir : 1; sortKey = k; render(); });
+
+// ---------------------------------------------------------------- plan
+const chosenTypes = () => $$("aside .opt input[type=checkbox]:checked").map(i => i.value);
+$$("aside .opt input[type=checkbox]").forEach(i => i.onchange = () => render());
+$$(".chip").forEach(ch => ch.onclick = () => { const p = PRESETS[ch.dataset.preset]; $$("aside .opt input[type=checkbox]").forEach(i => i.checked = p.includes(i.value)); render(); });
+function updatePlan() {
+  const t = chosenTypes(), s = selected.size, btn = $("#btnExport");
+  const selMb = courses.filter(c => selected.has(c.id)).reduce((a, c) => a + (Number(c.storage_mb) || 0), 0);
+  if (!s) $("#plan").innerHTML = `<strong>No courses selected</strong>Tick courses in the table, or use the box in the header to select all shown.`;
+  else if (!t.length) $("#plan").innerHTML = `<strong>${n(s)} course${s > 1 ? "s" : ""}</strong>Choose at least one thing to export.`;
+  else $("#plan").innerHTML = `<strong>${n(s * t.length)} export${s * t.length > 1 ? "s" : ""}</strong>${n(s)} course${s > 1 ? "s" : ""}, ${t.length} item${t.length > 1 ? "s" : ""} each` +
+    (selMb && (t.includes("common_cartridge") || t.includes("zip")) ? `, about ${fmtMB(selMb)} of files` : "");
+  const FILES = {common_cartridge: "course.imscc", zip: "files.zip", qti: "quizzes_qti.zip", people: "people.csv, sections.csv, groups.csv",
+    grades: "gradebook.csv, submissions.csv, comments, assignments.csv", discussions: "topics, posts and replies (CSV + JSON)", quiz_results: "quiz_results.csv"};
+  const stud = courses.filter(c => selected.has(c.id)).reduce((a, c) => a + (c.students || 0), 0);
+  const extra = {people: stud ? `about ${n(stud)} students plus teachers` : "", grades: stud ? `${n(stud)} students` : "", quiz_results: stud ? `${n(stud)} students` : ""};
+  $("#breakdown").innerHTML = s ? t.map(k => `<li><b>${esc(TYPE_LABEL[k])}</b><em>${n(s)}</em><span>${esc(FILES[k])}${extra[k] ? ", " + esc(extra[k]) : ""}</span></li>`).join("") : "";
+  btn.disabled = !s || !t.length;
+  btn.textContent = s ? `Export ${n(s)} course${s > 1 ? "s" : ""}` : "Export";
+}
+
+// ---------------------------------------------------------------- CSV helpers
+const q = v => { v = v === null || v === undefined ? "" : String(v); return /[",\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+const csvArrays = (head, rows) => "﻿" + [head, ...rows].map(r => r.map(q).join(",")).join("\r\n") + "\r\n";
+const csvObjects = (fields, rows) => csvArrays(fields, rows.map(r => fields.map(f => r[f])));
+function parseCSV(t) {  // small parser for previews
+  t = t.replace(/^﻿/, ""); const out = []; let row = [], f = "", i = 0, inq = false;
+  while (i < t.length) { const c = t[i];
+    if (inq) { if (c === '"') { if (t[i + 1] === '"') { f += '"'; i++; } else inq = false; } else f += c; }
+    else if (c === '"') inq = true; else if (c === ",") { row.push(f); f = ""; }
+    else if (c === "\n") { row.push(f.replace(/\r$/, "")); out.push(row); row = []; f = ""; } else f += c;
+    i++; }
+  if (f || row.length) { row.push(f); out.push(row); }
+  return out;
+}
+
+// ---------------------------------------------------------------- record exporters
+const ENR_STATES = ["active", "invited", "creation_pending", "completed", "inactive"];
+const getEnrollments = cid => paginate(`/courses/${cid}/enrollments`, ENR_STATES.map(s => ["state[]", s]));
+function studentMap(enr) {
+  const m = {};
+  enr.filter(e => e.type === "StudentEnrollment").forEach(e => { const u = e.user || {};
+    m[e.user_id] = {name: u.name || "", sis_user_id: u.sis_user_id || "", login_id: u.login_id || "", grades: e.grades || {}}; });
+  return m;
+}
+const PEOPLE_FIELDS = ["user_id", "name", "sortable_name", "sis_user_id", "login_id", "email", "role", "enrollment_type", "section",
+  "enrollment_state", "created_at", "last_activity_at", "total_activity_time_sec", "current_score", "final_score", "current_grade", "final_grade"];
+async function buildPeople(cid, warn, prog = () => {}) {
+  const enr = await getEnrollments(cid); prog(30);
+  const emails = {};
+  try { (await paginate(`/courses/${cid}/users`, [["include[]", "email"], ...["active", "invited", "completed", "inactive"].map(s => ["enrollment_state[]", s])]))
+      .forEach(u => emails[u.id] = u.email || ""); }
+  catch (e) { warn.push(`emails not available (${e.status || "error"})`); }
+  prog(50);
+  const sections = await paginate(`/courses/${cid}/sections`, [["include[]", "total_students"]]);
+  const sec = Object.fromEntries(sections.map(s => [s.id, s.name || ""]));
+  const rows = enr.map(e => { const u = e.user || {}, g = e.grades || {};
+    return {user_id: e.user_id, name: u.name || "", sortable_name: u.sortable_name || "", sis_user_id: u.sis_user_id || "",
+      login_id: u.login_id || "", email: emails[e.user_id] || "", role: e.role || "", enrollment_type: e.type || "",
+      section: sec[e.course_section_id] || "", enrollment_state: e.enrollment_state || "", created_at: e.created_at || "",
+      last_activity_at: e.last_activity_at || "", total_activity_time_sec: e.total_activity_time || "",
+      current_score: g.current_score ?? "", final_score: g.final_score ?? "", current_grade: g.current_grade || "", final_grade: g.final_grade || ""}; });
+  return {rows, sections};
+}
+const EXPORTERS = {
+  async people(cid, warn, prog) {
+    const {rows, sections} = await buildPeople(cid, warn, prog); prog(70);
+    const groups = [];
+    try { for (const g of await paginate(`/courses/${cid}/groups`))
+        for (const u of await paginate(`/groups/${g.id}/users`))
+          groups.push({group_id: g.id, group_name: g.name || "", group_category_id: g.group_category_id || "", user_id: u.id, user_name: u.name || ""}); }
+    catch (e) { warn.push(`groups not available (${e.status || "error"})`); }
+    if (!rows.length) warn.push("Canvas returned no enrollments for this course");
+    return {summary: `${n(rows.length)} people, ${sections.length} sections, ${groups.length} group memberships`, files: [
+      {name: "people.csv", fields: PEOPLE_FIELDS, rows},
+      {name: "sections.csv", fields: ["section_id", "name", "sis_section_id", "start_at", "end_at", "total_students"],
+       rows: sections.map(s => ({section_id: s.id, name: s.name || "", sis_section_id: s.sis_section_id || "", start_at: s.start_at || "", end_at: s.end_at || "", total_students: s.total_students ?? ""}))},
+      {name: "groups.csv", fields: ["group_id", "group_name", "group_category_id", "user_id", "user_name"], rows: groups}]};
+  },
+  async grades(cid, warn, prog) {
+    const groups = Object.fromEntries((await paginate(`/courses/${cid}/assignment_groups`)).map(g => [g.id, g.name || ""]));
+    const asg = await paginate(`/courses/${cid}/assignments`); prog(20);
+    const aName = Object.fromEntries(asg.map(a => [a.id, a.name || ""]));
+    const students = studentMap(await getEnrollments(cid)); prog(35);
+    const subs = await paginate(`/courses/${cid}/students/submissions`, [["student_ids[]", "all"], ["include[]", "submission_comments"]]); prog(85);
+    const subRows = [], comments = [], score = {};
+    for (const s of subs) {
+      const st = students[s.user_id] || {}, an = aName[s.assignment_id] || "";
+      score[`${s.user_id}:${s.assignment_id}`] = s.excused ? "EX" : s.score;
+      subRows.push({assignment_id: s.assignment_id, assignment: an, user_id: s.user_id, student: st.name || "", sis_user_id: st.sis_user_id || "",
+        workflow_state: s.workflow_state || "", score: s.score ?? "", grade: s.grade || "", submitted_at: s.submitted_at || "", graded_at: s.graded_at || "",
+        late: s.late ?? "", missing: s.missing ?? "", excused: s.excused ?? "", attempt: s.attempt || "", submission_type: s.submission_type || "",
+        seconds_late: s.seconds_late ?? "", url: s.url || "", text_body: s.body ? text(s.body) : ""});
+      (s.submission_comments || []).forEach(c => comments.push({assignment: an, student: st.name || "", user_id: s.user_id, author: c.author_name || "", created_at: c.created_at || "", comment: c.comment || ""}));
+    }
+    const cols = asg.map(a => [a.id, `${a.name || ""} (${a.points_possible || 0} pts)`]);
+    const gbFields = ["student", "user_id", "sis_user_id", "login_id", ...cols.map(c => c[1]), "current_score", "final_score", "current_grade", "final_grade"];
+    const gb = Object.entries(students).sort((a, b) => a[1].name.localeCompare(b[1].name)).map(([uid, st]) => {
+      const r = {student: st.name, user_id: uid, sis_user_id: st.sis_user_id, login_id: st.login_id};
+      cols.forEach(([aid, label]) => { const v = score[`${uid}:${aid}`]; r[label] = v ?? ""; });
+      const g = st.grades; return Object.assign(r, {current_score: g.current_score ?? "", final_score: g.final_score ?? "", current_grade: g.current_grade || "", final_grade: g.final_grade || ""});
+    });
+    return {summary: `${n(Object.keys(students).length)} students, ${asg.length} assignments, ${n(subRows.length)} submissions`, files: [
+      {name: "gradebook.csv", fields: gbFields, rows: gb},
+      {name: "submissions.csv", fields: ["assignment_id", "assignment", "user_id", "student", "sis_user_id", "workflow_state", "score", "grade", "submitted_at",
+        "graded_at", "late", "missing", "excused", "attempt", "submission_type", "seconds_late", "url", "text_body"], rows: subRows},
+      {name: "submission_comments.csv", fields: ["assignment", "student", "user_id", "author", "created_at", "comment"], rows: comments},
+      {name: "assignments.csv", fields: ["assignment_id", "name", "group", "points_possible", "grading_type", "due_at", "unlock_at", "lock_at", "published", "submission_types", "omit_from_final_grade"],
+       rows: asg.map(a => ({assignment_id: a.id, name: a.name || "", group: groups[a.assignment_group_id] || "", points_possible: a.points_possible ?? "", grading_type: a.grading_type || "",
+         due_at: a.due_at || "", unlock_at: a.unlock_at || "", lock_at: a.lock_at || "", published: a.published ?? "", submission_types: (a.submission_types || []).join(";"), omit_from_final_grade: a.omit_from_final_grade ?? ""}))}]};
+  },
+  async discussions(cid, warn, prog) {
+    const topics = await paginate(`/courses/${cid}/discussion_topics`);
+    const ann = await paginate(`/courses/${cid}/discussion_topics`, [["only_announcements", "true"]]);
+    const seen = new Set(), all = [];
+    [["announcement", ann], ["discussion", topics]].forEach(([k, l]) => l.forEach(t => { if (!seen.has(t.id)) { seen.add(t.id); all.push([k, t]); } }));
+    const tRows = [], pRows = [], raw = {}; let failed = 0;
+    for (let i = 0; i < all.length; i++) {
+      const [kind, t] = all[i]; prog(Math.round(100 * i / Math.max(1, all.length)));
+      tRows.push({topic_id: t.id, type: kind, title: t.title || "", author: (t.author || {}).display_name || "", posted_at: t.posted_at || t.created_at || "",
+        replies: t.discussion_subentry_count ?? "", message: text(t.message)});
+      let view; try { view = (await cv({path: `/courses/${cid}/discussion_topics/${t.id}/view`})).data; } catch (e) { failed++; continue; }
+      raw[t.id] = {topic: t, view};
+      const people = Object.fromEntries((view.participants || []).map(p => [p.id, p.display_name || ""]));
+      const walk = (list, parent) => (list || []).forEach(e => {
+        pRows.push({topic_id: t.id, topic_title: t.title || "", type: kind, entry_id: e.id, parent_entry_id: parent || "", author_id: e.user_id ?? "",
+          author: people[e.user_id] || "", created_at: e.created_at || "", updated_at: e.updated_at || "", deleted: !!e.deleted, message: text(e.message)});
+        walk(e.replies, e.id); });
+      walk(view.view, null);
+    }
+    if (failed) warn.push(`${failed} topic(s) could not be read`);
+    return {summary: `${tRows.length} topics and announcements, ${n(pRows.length)} posts`, files: [
+      {name: "discussion_topics.csv", fields: ["topic_id", "type", "title", "author", "posted_at", "replies", "message"], rows: tRows},
+      {name: "discussion_posts.csv", fields: ["topic_id", "topic_title", "type", "entry_id", "parent_entry_id", "author_id", "author", "created_at", "updated_at", "deleted", "message"], rows: pRows},
+      {name: "discussions_raw.json", json: raw}]};
+  },
+  async quiz_results(cid, warn, prog) {
+    const quizzes = await paginate(`/courses/${cid}/quizzes`), students = studentMap(await getEnrollments(cid));
+    const rows = []; let failed = 0;
+    for (let i = 0; i < quizzes.length; i++) {
+      const qz = quizzes[i]; prog(Math.round(100 * i / Math.max(1, quizzes.length)));
+      let subs; try { subs = await paginate(`/courses/${cid}/quizzes/${qz.id}/submissions`, [], "quiz_submissions"); } catch (e) { failed++; continue; }
+      subs.forEach(s => { const st = students[s.user_id] || {};
+        rows.push({quiz_id: qz.id, quiz: qz.title || "", user_id: s.user_id, student: st.name || "", sis_user_id: st.sis_user_id || "", attempt: s.attempt ?? "",
+          score: s.score ?? "", kept_score: s.kept_score ?? "", points_possible: qz.points_possible ?? "", started_at: s.started_at || "",
+          finished_at: s.finished_at || "", time_spent_sec: s.time_spent ?? "", workflow_state: s.workflow_state || ""}); });
+    }
+    if (failed) warn.push(`${failed} quiz(zes) could not be read`);
+    return {summary: `${quizzes.length} quizzes, ${n(rows.length)} attempts`, files: [{name: "quiz_results.csv",
+      fields: ["quiz_id", "quiz", "user_id", "student", "sis_user_id", "attempt", "score", "kept_score", "points_possible", "started_at", "finished_at", "time_spent_sec", "workflow_state"], rows}]};
+  },
+  async account_users(aid, warn, prog) {
+    const users = await paginate(`/accounts/${aid}/users`, [["include[]", "email"], ["include[]", "last_login"]]);
+    return {summary: `${n(users.length)} users`, files: [{name: "account_users.csv",
+      fields: ["user_id", "name", "sortable_name", "sis_user_id", "login_id", "email", "created_at", "last_login"],
+      rows: users.map(u => ({user_id: u.id, name: u.name || "", sortable_name: u.sortable_name || "", sis_user_id: u.sis_user_id || "",
+        login_id: u.login_id || "", email: u.email || "", created_at: u.created_at || "", last_login: u.last_login || ""}))}]};
+  },
+};
+
+// ---------------------------------------------------------------- job runner
+let renderTimer = null;
+const renderSoon = () => { if (!renderTimer) renderTimer = setTimeout(() => { renderTimer = null; renderJobs(); }, 400); };
+const setJob = (j, o) => { Object.assign(j, o); renderSoon(); };
+const courseParts = c => c.parts || [safe(c.term || "no_term"), `${c.id}_${safe(c.course_code || c.name)}`];
+
+function enqueue(course, type) {
+  if (jobs.some(j => j.course.id === course.id && j.type === type && j.status !== "failed")) return false;
+  const j = {id: uid(), course, type, status: "queued", progress: 0, files: []};
+  jobs.push(j); queue.push(j); pump(); return true;
+}
+function pump() {
+  while (running < PARALLEL && queue.length) {
+    const j = queue.shift(); running++;
+    runJob(j).finally(() => { running--; pump(); renderSoon(); });
+  }
+}
+async function runJob(j) {
+  j.saveMode = saveMode;
+  try {
+    setJob(j, {status: "requesting", progress: 0, error: null, warning: "", files: []});
+    if (CONTENT[j.type]) await runContent(j); else await runRecords(j);
+    setJob(j, {status: "done", progress: 100});
+  } catch (e) { setJob(j, {status: "failed", error: String(e.message || e).slice(0, 300)}); }
+  addManifest(j);
+}
+async function sha256(buf) { const h = await crypto.subtle.digest("SHA-256", buf); return [...new Uint8Array(h)].map(b => b.toString(16).padStart(2, "0")).join(""); }
+
+async function runContent(j) {
+  const cid = j.course.id, name = CONTENT[j.type];
+  let exp = (await cv({method: "POST", path: `/courses/${cid}/content_exports`, data: {export_type: j.type}})).data;
+  setJob(j, {status: "exporting"});
+  const start = Date.now();
+  for (;;) {
+    if (Date.now() - start > EXPORT_TIMEOUT_MS) throw new Error("Canvas took too long to package this course");
+    await sleep(POLL_MS);
+    exp = (await cv({path: `/courses/${cid}/content_exports/${exp.id}`})).data;
+    if (exp.progress_url) { try { setJob(j, {progress: (await cv({url: exp.progress_url})).data.completion || j.progress}); } catch (e) {} }
+    if (exp.workflow_state === "exported") break;
+    if (exp.workflow_state === "failed") throw new Error("Canvas reported the export as failed");
+  }
+  const att = exp.attachment || {}; if (!att.url) throw new Error("Export finished but Canvas gave no download link");
+  setJob(j, {status: "downloading", progress: 100});
+
+  let blob = null;
+  // 1) small files: through the exporter (works for any Canvas storage)
+  if (!att.size || att.size < 4e6) {
+    try {
+      const r = await fetch("/api/export_file", {method: "POST", credentials: "same-origin",
+        headers: {"Content-Type": "application/json", "X-Requested-With": "fetch"}, body: JSON.stringify({course_id: cid, export_id: exp.id})});
+      if (r.ok) blob = await r.blob();
+    } catch (e) {}
+  }
+  // 2) larger files: straight from Canvas storage, if it allows this site to read it
+  if (!blob) {
+    try { const r = await fetch(att.url, {mode: "cors", credentials: "omit"});
+      if (r.ok && !(r.headers.get("Content-Type") || "").includes("text/html")) blob = await r.blob(); } catch (e) {}
+  }
+  if (blob) {
+    setJob(j, {status: "verifying"});
+    const head = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+    if (blob.size === 0) throw new Error("The downloaded file is empty");
+    if (!(head[0] === 0x50 && head[1] === 0x4b)) throw new Error("The downloaded file is not a valid zip");
+    const hash = blob.size < 300e6 ? await sha256(await blob.arrayBuffer()) : "";
+    setJob(j, {status: "saving"});
+    const parts = courseParts(j.course);
+    if (j.saveMode === "folder") await writeFile(parts, name, blob);
+    else downloadBlob(`${j.course.id}_${safe(j.course.course_code || j.course.name)}_${name}`, blob);
+    setJob(j, {size: blob.size, sha256: hash, path: [...parts, name].join("/"),
+      files: [{name, size: blob.size, path: [...parts, name].join("/"), blob: j.saveMode === "download" ? null : null, url: att.url}],
+      summary: j.saveMode === "folder" ? "Saved in your folder" : "Downloaded"});
+  } else {
+    // 3) fall back to the browser's own download (lands in the Downloads folder)
+    browserDownload(att.url);
+    setJob(j, {size: att.size || 0, path: att.display_name || name, files: [{name: att.display_name || name, size: att.size || 0, url: att.url}],
+      summary: "Sent to your Downloads folder", warning: j.saveMode === "folder" ? "Your Canvas file storage doesn't allow saving into the chosen folder, so the browser downloaded it instead." : ""});
+  }
+}
+
+async function runRecords(j) {
+  setJob(j, {status: "collecting"});
+  const warn = [], key = j.type === "account_users" ? j.course.account_id : j.course.id;
+  const res = await EXPORTERS[j.type](key, warn, p => setJob(j, {progress: p}));
+  setJob(j, {status: "saving"});
+  const parts = j.type === "account_users" ? courseParts(j.course) : [...courseParts(j.course), j.type];
+  const files = []; let total = 0;
+  for (const f of res.files) {
+    const body = f.json ? JSON.stringify(f.json, null, 1) : csvObjects(f.fields, f.rows);
+    const size = new Blob([body]).size; total += size;
+    if (j.saveMode === "folder") await writeFile(parts, f.name, body);
+    files.push({name: f.name, size, rows: f.json ? null : f.rows.length, path: [...parts, f.name].join("/"), body});
+  }
+  setJob(j, {files, size: total, summary: res.summary, warning: warn.join("; "), path: parts.join("/")});
+}
+
+// ---------------------------------------------------------------- manifest
+const MANIFEST_FIELDS = ["finished_at", "course_id", "sis_course_id", "course_code", "name", "term", "state", "export_type", "status", "file", "size_bytes", "sha256", "note"];
+let manifestWrite = Promise.resolve();
+function addManifest(j) {
+  const c = j.course;
+  manifest.push({finished_at: nowStr(), course_id: c.id, sis_course_id: c.sis_course_id || "", course_code: c.course_code || "", name: c.name, term: c.term || "",
+    state: c.state || "", export_type: j.type, status: j.status, file: j.path || "", size_bytes: j.size || "", sha256: j.sha256 || "",
+    note: j.error || [j.summary, j.warning].filter(Boolean).join("; ")});
+  if (saveMode === "folder" && rootDir) manifestWrite = manifestWrite.then(() => writeFile([], "manifest.csv", csvObjects(MANIFEST_FIELDS, manifest))).catch(() => {});
+}
+$("#btnManifest").onclick = () => manifest.length ? downloadBlob("manifest.csv", new Blob([csvObjects(MANIFEST_FIELDS, manifest)], {type: "text/csv"})) : toast("Nothing has finished yet.");
+
+// Minimal zip writer (stored, no compression): no outside libraries needed.
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let i = 0; i < 256; i++) { let c = i; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[i] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_TABLE[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {   // files: [{path, body: string}]
+  const enc = new TextEncoder(), chunks = [], central = []; let offset = 0;
+  const d = new Date(), dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1),
+        dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.path), data = typeof f.body === "string" ? enc.encode(f.body) : f.body, crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, dosTime, true); h.setUint16(12, dosDate, true); h.setUint32(14, crc, true);
+    h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    chunks.push(h.buffer, name, data);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 0, true);
+    c.setUint16(12, dosTime, true); c.setUint16(14, dosDate, true); c.setUint32(16, crc, true); c.setUint32(20, data.length, true);
+    c.setUint32(24, data.length, true); c.setUint16(28, name.length, true); c.setUint32(42, offset, true);
+    central.push(c.buffer, name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((a, b) => a + b.byteLength, 0), e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdSize, true); e.setUint32(16, offset, true);
+  return new Blob([...chunks, ...central, e.buffer], {type: "application/zip"});
+}
+async function zipAndDownload(name, fileList) { downloadBlob(name, makeZip(fileList)); }
+$("#btnZip").onclick = async () => {
+  const files = jobs.filter(j => j.status === "done").flatMap(j => j.files.filter(f => f.body));
+  if (!files.length) { toast("No people or records have been exported yet."); return; }
+  files.push({path: "manifest.csv", body: csvObjects(MANIFEST_FIELDS, manifest)});
+  toast("Building the zip"); try { await zipAndDownload(`canvas_records_${new Date().toISOString().slice(0, 10)}.zip`, files); } catch (e) { toast(e.message); }
+};
+
+// ---------------------------------------------------------------- start export
+$("#btnExport").onclick = async () => {
+  const types = chosenTypes(), total = selected.size * types.length;
+  if (!(await folderReady())) { toast("Choose a folder to save into, or switch to downloads."); return; }
+  if (total > 50 && !confirm(`Start ${total} exports? They run in this tab, ${PARALLEL} at a time. Keep the tab open until they finish.`)) return;
+  let queued = 0, skipped = 0;
+  courses.filter(c => selected.has(c.id)).forEach(c => types.forEach(t => enqueue(c, t) ? queued++ : skipped++));
+  toast(skipped ? `Started ${queued} exports. Skipped ${skipped} already done or running.` : `Started ${queued} exports.`);
+  showTab("queue"); renderJobs();
+};
+$("#btnAcctUsers").onclick = async () => {
+  if (!(await folderReady())) { toast("Choose a folder to save into, or switch to downloads."); return; }
+  const course = {id: `account-${accountId}`, account_id: accountId, name: `All users in account ${accountId}`, course_code: "", term: "", parts: [`_account_${accountId}`]};
+  toast(enqueue(course, "account_users") ? "Started exporting all account users." : "All account users is already exported or running.");
+  showTab("queue"); renderJobs();
+};
+$("#btnRetry").onclick = () => {
+  const failed = jobs.filter(j => j.status === "failed");
+  failed.forEach(j => { setJob(j, {status: "queued", progress: 0, error: null}); queue.push(j); }); pump();
+  toast(failed.length ? `Retrying ${failed.length} failed exports.` : "Nothing has failed.");
+};
+
+// ---------------------------------------------------------------- queue view
+const RUNNING = ["requesting", "exporting", "downloading", "verifying", "collecting", "saving"];
+const statusGroup = j => RUNNING.includes(j.status) ? "running" : j.status;
+function renderJobs() {
+  const cnt = g => jobs.filter(j => g === "all" || statusGroup(j) === g).length, active = cnt("running") + cnt("queued");
+  $("#badgeQueue").textContent = active ? `${active} running` : n(jobs.length);
+  $("#qfilters").innerHTML = [["all", "All"], ["running", "In progress"], ["queued", "Waiting"], ["done", "Done"], ["failed", "Failed"]]
+    .map(([k, l]) => `<button class="qchip" data-q="${k}" aria-pressed="${qStatus === k}">${l} <b class="${k === "failed" && cnt(k) ? "note-bad" : ""}">${n(cnt(k))}</b></button>`).join("") +
+    `<span class="sub" style="margin-left:6px">${fmtBytes(jobs.reduce((a, j) => a + (j.size || 0), 0)) || "0 B"} exported</span>`;
+  const types = [...new Set(jobs.map(j => j.type))];
+  $("#qtype").innerHTML = `<option value="">All exports (${n(jobs.length)})</option>` +
+    types.map(t => `<option value="${t}" ${t === qType ? "selected" : ""}>${esc(TYPE_LABEL[t] || t)} (${n(jobs.filter(j => j.type === t).length)})</option>`).join("");
+  const list = jobs.filter(j => (qStatus === "all" || statusGroup(j) === qStatus) && (!qType || j.type === qType)).slice().reverse();
+  $("#jobBody").innerHTML = list.map(j => {
+    const pct = j.status === "done" ? 100 : Math.max(0, Math.min(100, j.progress || 0)), open = openJobs.has(j.id) && j.status === "done";
+    const result = j.error ? `<span class="note-bad">${esc(j.error)}</span>`
+      : `${j.summary ? `<div>${esc(j.summary)}</div>` : ""}${j.warning ? `<div class="note-warn">${esc(j.warning)}</div>` : ""}`;
+    return `<tr class="jobrow s-row-${esc(j.status)} ${open ? "open" : ""}" data-job="${j.id}">
+      <td><div class="cname">${esc(j.course.name)}</div><div class="sub" style="padding-left:14px">${esc(j.course.course_code || "")}</div></td>
+      <td>${esc(TYPE_LABEL[j.type] || j.type)}</td>
+      <td><span class="status s-${esc(j.status)}">${esc(JOB_LABEL[j.status] || j.status)}</span></td>
+      <td class="hide-sm"><div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div></td>
+      <td class="num">${fmtBytes(j.size)}</td>
+      <td>${result}${j.status === "done" ? `<div class="sub">${open ? "Hide files" : "Click to see files"}</div>` : ""}</td></tr>` +
+      (open ? `<tr class="jobdetail"><td colspan="6">${filesHTML(j)}</td></tr>` : "");
+  }).join("") || `<tr><td colspan="6"><div class="empty"><b>${jobs.length ? "Nothing matches this filter" : "Nothing exported yet"}</b>${jobs.length ? "Choose another status or type above." : "Select courses, choose what to export on the left, then click Export."}</div></td></tr>`;
+}
+function filesHTML(j) {
+  return `<table class="files">${j.files.map((f, i) => `<tr>
+    <td><b style="font-weight:500">${esc(f.name)}</b><div class="path">${esc(f.path || "")}</div></td>
+    <td class="sub">${f.rows != null ? n(f.rows) + " rows" : ""}</td>
+    <td class="sub num">${fmtBytes(f.size)}</td>
+    <td class="row-actions">${f.rows != null ? `<button class="linkbtn" data-preview="${j.id}:${i}">Preview</button>` : ""}
+      ${f.body ? `<button class="linkbtn" data-dl="${j.id}:${i}">Download</button>` : f.url ? `<a class="linkbtn" href="${esc(f.url)}" target="_blank" rel="noopener">Download again</a>` : ""}</td></tr>`).join("")}</table>`;
+}
+$("#qfilters").addEventListener("click", e => { const b = e.target.closest("[data-q]"); if (b) { qStatus = b.dataset.q; renderJobs(); } });
+$("#qtype").onchange = e => { qType = e.target.value; renderJobs(); };
+$("#jobBody").addEventListener("click", e => {
+  const ref = (e.target.closest("[data-preview]") || e.target.closest("[data-dl]"));
+  if (ref) {
+    const [jid, i] = (ref.dataset.preview || ref.dataset.dl).split(":"), j = jobs.find(x => x.id === jid), f = j.files[+i];
+    if (ref.dataset.dl) downloadBlob(`${j.course.id}_${f.name}`, new Blob([f.body], {type: "text/csv"}));
+    else openPreview(`${j.course.name}: ${f.name}`, f);
+    return;
+  }
+  if (e.target.closest("a")) return;
+  const tr = e.target.closest(".jobrow"); if (!tr) return;
+  const j = jobs.find(x => x.id === tr.dataset.job); if (!j || j.status !== "done") return;
+  openJobs.has(j.id) ? openJobs.delete(j.id) : openJobs.add(j.id); renderJobs();
+});
+
+// ---------------------------------------------------------------- drawer
+function openDrawer(title, sub) {
+  $("#drawerTitle").textContent = title; $("#drawerSub").innerHTML = sub || "";
+  $("#drawerTools").innerHTML = ""; $("#drawerBody").innerHTML = `<div class="loading">Loading</div>`;
+  ["#scrim", "#drawer"].forEach(s => $(s).classList.remove("hidden"));
+  requestAnimationFrame(() => ["#scrim", "#drawer"].forEach(s => $(s).classList.add("show")));
+  $("#drawerClose").focus();
+}
+function closeDrawer() {
+  ["#scrim", "#drawer"].forEach(s => $(s).classList.remove("show"));
+  setTimeout(() => ["#scrim", "#drawer"].forEach(s => $(s).classList.add("hidden")), 220);
+}
+$("#drawerClose").onclick = closeDrawer; $("#scrim").onclick = closeDrawer;
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDrawer(); });
+const tableHTML = (head, rows) => `<table><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>` +
+  (rows.map(r => `<tr>${r.map(v => `<td>${esc(v)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${head.length}"><div class="empty"><b>No rows</b></div></td></tr>`) + `</tbody></table>`;
+const ROLE = r => ({StudentEnrollment: "Student", TeacherEnrollment: "Teacher", TaEnrollment: "TA", DesignerEnrollment: "Designer", ObserverEnrollment: "Observer"}[r] || r);
+
+async function openPeople(cid) {
+  const c = courses.find(x => x.id === cid) || {name: "Course " + cid};
+  openDrawer(`People in ${c.name}`, esc([c.course_code, c.term].filter(Boolean).join(", ")));
+  const warn = []; let res;
+  try { res = await buildPeople(cid, warn); }
+  catch (err) { $("#drawerBody").innerHTML = `<div style="padding:20px"><div class="error">${esc(err.message)}</div></div>`; return; }
+  const people = res.rows, roles = [...new Set(people.map(p => ROLE(p.enrollment_type)))]; let role = "", qq = "";
+  $("#drawerSub").innerHTML += `<div class="sub">${n(people.length)} enrollments in ${res.sections.length} section${res.sections.length === 1 ? "" : "s"}</div>` +
+    (warn.length ? `<div class="note-warn">${esc(warn.join("; "))}</div>` : "");
+  const cols = [["name", "Name"], ["enrollment_type", "Role"], ["section", "Section"], ["email", "Email"], ["login_id", "Login"], ["sis_user_id", "SIS ID"],
+    ["enrollment_state", "Status"], ["last_activity_at", "Last activity"], ["current_score", "Current score"], ["final_grade", "Final grade"]];
+  const draw = () => {
+    const list = people.filter(p => (!role || ROLE(p.enrollment_type) === role) && (!qq || [p.name, p.email, p.login_id, p.sis_user_id].some(v => String(v || "").toLowerCase().includes(qq))));
+    $("#drawerBody").innerHTML = tableHTML(cols.map(c => c[1]), list.map(p => cols.map(([k]) => k === "enrollment_type" ? ROLE(p[k]) : k === "last_activity_at" && p[k] ? new Date(p[k]).toLocaleString() : p[k])));
+    $$("#drawerTools .qchip").forEach(b => b.setAttribute("aria-pressed", b.dataset.r === role));
+  };
+  $("#drawerTools").innerHTML = `<input type="search" id="pq" placeholder="Search name, email, login or SIS ID">
+    <div class="rolechips"><button class="qchip" data-r="">Everyone <b>${n(people.length)}</b></button>` +
+    roles.map(r => `<button class="qchip" data-r="${esc(r)}">${esc(r)} <b>${n(people.filter(p => ROLE(p.enrollment_type) === r).length)}</b></button>`).join("") +
+    `</div><span style="flex:1"></span><button class="btn sm primary" id="pdl">Download people.csv</button>`;
+  $("#pq").oninput = e => { qq = e.target.value.trim().toLowerCase(); draw(); };
+  $$("#drawerTools .qchip").forEach(b => b.onclick = () => { role = b.dataset.r; draw(); });
+  $("#pdl").onclick = () => downloadBlob(`${safe(c.course_code || cid)}_people.csv`, new Blob([csvObjects(PEOPLE_FIELDS, people)], {type: "text/csv"}));
+  draw();
+}
+function openPreview(title, f) {
+  openDrawer(title, `<span class="path">${esc(f.path)}</span>`);
+  const all = parseCSV(f.body), head = all[0] || [], rows = all.slice(1).filter(r => r.length > 1 || r[0]), shown = rows.slice(0, 500);
+  $("#drawerTools").innerHTML = `<span class="sub">${rows.length > shown.length ? `Showing the first ${n(shown.length)} of ${n(rows.length)} rows` : `${n(rows.length)} rows`}</span>
+    <span style="flex:1"></span><button class="btn sm primary" id="pvdl">Download</button>`;
+  $("#pvdl").onclick = () => downloadBlob(f.name, new Blob([f.body], {type: "text/csv"}));
+  $("#drawerBody").innerHTML = tableHTML(head, shown);
+}
+</script>
+</body>
+</html>
