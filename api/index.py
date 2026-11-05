@@ -22,13 +22,33 @@ import secrets
 import threading
 import time
 from datetime import timedelta
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlencode, urlparse
 
 import requests
 from cryptography.fernet import Fernet, InvalidToken
 from flask import Flask, Response, jsonify, render_template, request, session
 
 app = Flask(__name__, template_folder=os.path.join(os.path.dirname(__file__), "templates"))
+
+
+class VercelPath:
+    """Vercel sends every address to this one function. vercel.json passes the
+    address the visitor actually opened as ?__path=..., and this puts it back
+    so Flask can route normally."""
+    def __init__(self, wsgi):
+        self.wsgi = wsgi
+
+    def __call__(self, environ, start_response):
+        qs = parse_qs(environ.get("QUERY_STRING", ""), keep_blank_values=True)
+        if "__path" in qs:
+            environ["PATH_INFO"] = "/" + qs.pop("__path")[0].lstrip("/")
+            environ["QUERY_STRING"] = urlencode(qs, doseq=True)
+        elif environ.get("PATH_INFO", "").rstrip("/") in ("/api/index", "/api/index.py"):
+            environ["PATH_INFO"] = "/"
+        return self.wsgi(environ, start_response)
+
+
+app.wsgi_app = VercelPath(app.wsgi_app)
 
 ON_VERCEL = bool(os.environ.get("VERCEL"))
 SECRET = os.environ.get("SECRET_KEY") or ""
@@ -124,6 +144,8 @@ def gate():
     if request.endpoint in ("index", "unlock"):
         return None
     if not session.get("unlocked"):
+        if request.method == "GET" and not request.path.startswith("/api/"):
+            return render_template("unlock.html")
         return jsonify(error="Locked. Enter the passcode first."), 401
     # CSRF guard: browsers won't send this custom header cross-site without CORS approval.
     if request.method != "GET" and request.headers.get("X-Requested-With") != "fetch":
