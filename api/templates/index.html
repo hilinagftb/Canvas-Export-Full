@@ -9,10 +9,11 @@
 <meta name="robots" content="noindex, nofollow">
 <style>
   :root {
-    --bg: #FFFFFF; --surface: #FFFFFF; --sunken: #F5F7FA; --ink: #172036; --muted: #5B6478;
-    --line: #DCE1EA; --accent: #2846C8; --accent-ink: #FFFFFF; --accent-soft: #E8ECFB;
-    --ok: #157F5B; --ok-soft: #E4F4EC; --warn: #A15C07; --warn-soft: #FCF1DE;
-    --bad: #B42318; --bad-soft: #FDECEA; --info: #3B5BDB;
+    --bg: #FFFFFF; --surface: #FFFFFF; --sunken: #F6F8F5; --ink: #14261B; --muted: #56655B;
+    --line: #DDE4DE; --accent: #106030; --accent-ink: #FFFFFF; --accent-soft: #E7F1EA;
+    --gold: #C8A850; --gold-soft: #F7F0DC; --tan: #C89860; --orange: #D07828;
+    --ok: #1C7D45; --ok-soft: #E4F3EA; --warn: #B0651C; --warn-soft: #FBEEDC;
+    --bad: #B42318; --bad-soft: #FDECEA; --info: #106030;
     --radius: 10px; --sidebar: 340px;
     font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   }
@@ -54,10 +55,19 @@
 
   /* ---------- workspace ---------- */
   .app { display: grid; grid-template-columns: var(--sidebar) 1fr; grid-template-rows: auto 1fr; height: 100vh; }
-  .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 56px;
-            background: var(--surface); border-bottom: 1px solid var(--line); }
+  .topbar { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; padding: 0 20px; height: 60px;
+            background: var(--accent); color: #fff; border-bottom: 3px solid var(--orange); }
+  .topbar .brand { color: #fff; }
+  .topbar .brand small { display: block; font-weight: 400; font-size: 11.5px; color: var(--gold); letter-spacing: .02em; }
+  .topbar .conn { color: rgba(255,255,255,.82); }
+  .topbar .conn .dot { background: var(--gold); }
+  .topbar .btn { background: transparent; color: #fff; border-color: rgba(255,255,255,.35); }
+  .topbar .btn:hover { background: rgba(255,255,255,.1); }
+  .topbar .btn.ghost { border-color: transparent; color: rgba(255,255,255,.8); }
+  .logo-sm { width: 38px; height: 38px; border-radius: 50%; background: #fff; padding: 2px; }
+  .logo-lg { display: block; height: 110px; margin: 0 0 22px; }
   .brand { font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 10px; }
-  .brand-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; }
+  .brand-mark { width: 30px; height: 30px; border-radius: 8px; background: var(--gold); display: grid; place-items: center; }
   .conn { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 13px; min-width: 0; }
   .conn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: none; }
   .conn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -78,7 +88,7 @@
   .presets { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
   .chip { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
           cursor: pointer; font-size: 12.5px; color: var(--muted); }
-  .chip:hover { color: var(--ink); border-color: var(--accent); }
+  .chip:hover { color: var(--accent); border-color: var(--gold); background: var(--gold-soft); }
 
   .side-foot { border-top: 1px solid var(--line); padding: 16px 20px 20px; background: var(--surface); }
   .plan { font-size: 13px; color: var(--muted); margin-bottom: 12px; min-height: 40px; }
@@ -88,10 +98,10 @@
   .tabs { display: flex; gap: 4px; padding: 12px 20px 0; border-bottom: 1px solid var(--line); background: #fff; }
   .tab { border: 0; background: none; padding: 10px 14px 12px; cursor: pointer; color: var(--muted); font-weight: 500;
          border-bottom: 2px solid transparent; margin-bottom: -1px; display: flex; gap: 8px; align-items: center; }
-  .tab[aria-selected=true] { color: var(--ink); border-bottom-color: var(--accent); }
+  .tab[aria-selected=true] { color: var(--accent); border-bottom-color: var(--gold); font-weight: 600; }
   .badge { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--ink);
            font-size: 11.5px; display: inline-grid; place-items: center; font-weight: 600; }
-  .tab[aria-selected=true] .badge { background: var(--accent); color: var(--accent-ink); }
+  .tab[aria-selected=true] .badge { background: var(--gold); color: var(--ink); }
   .panel { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 16px 20px 20px; gap: 12px; }
 
   .filters { display: grid; grid-template-columns: minmax(200px, 2fr) repeat(3, minmax(140px, 1fr)) auto; gap: 8px; }
@@ -130,7 +140,7 @@
   @keyframes pulse { 50% { opacity: .25; } }
 
   .bar { height: 6px; background: var(--sunken); border: 1px solid var(--line); border-radius: 99px; overflow: hidden; width: 120px; }
-  .bar i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+  .bar i { display: block; height: 100%; background: var(--gold); transition: width .4s; }
   .s-row-done .bar i { background: var(--ok); }
   .s-row-failed .bar i { background: var(--bad); }
 
@@ -150,7 +160,7 @@
 
   /* selection bar */
   .selbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: 9px;
-            background: var(--accent-soft); color: var(--ink); font-size: 13.5px; }
+            border-left: 4px solid var(--gold); background: var(--accent-soft); color: var(--ink); font-size: 13.5px; }
   .selbar b { font-weight: 600; }
   .selbar .btn { margin-left: auto; }
   .selbar .btn + .btn { margin-left: 0; }
@@ -160,7 +170,7 @@
   .breakdown li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 6px 0; border-top: 1px solid var(--line); }
   .breakdown li span { color: var(--muted); grid-column: 1 / -1; font-size: 12px; }
   .breakdown li b { font-weight: 500; color: var(--ink); }
-  .breakdown li em { font-style: normal; font-weight: 600; color: var(--accent); }
+  .breakdown li em { font-style: normal; font-weight: 600; color: var(--accent); background: var(--gold-soft); border-radius: 999px; padding: 0 8px; }
 
   /* queue filters */
   .qfilters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
@@ -181,11 +191,11 @@
   .row-actions { display: flex; gap: 14px; align-items: center; }
 
   /* drawer */
-  .scrim { position: fixed; inset: 0; background: rgba(23, 32, 54, .28); z-index: 20; opacity: 0; transition: opacity .2s; }
+  .scrim { position: fixed; inset: 0; background: rgba(16, 48, 28, .30); z-index: 20; opacity: 0; transition: opacity .2s; }
   .scrim.show { opacity: 1; }
   .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(980px, 96vw); background: #fff; z-index: 21;
             border-left: 1px solid var(--line); display: flex; flex-direction: column; transform: translateX(100%);
-            transition: transform .22s ease-out; box-shadow: -12px 0 32px rgba(23, 32, 54, .08); }
+            transition: transform .22s ease-out; box-shadow: -12px 0 32px rgba(16, 48, 28, .10); }
   .drawer.show { transform: none; }
   .drawer-head { padding: 18px 22px 14px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: flex-start; }
   .drawer-head h3 { margin: 0; font-size: 17px; font-weight: 600; }
@@ -215,7 +225,7 @@
 <!-- ================= Connect ================= -->
 <div class="connect" id="connectView">
   <form class="connect-box" id="connectForm" autocomplete="off">
-    <div class="brand-mark" style="width:36px;height:36px;border-radius:9px;margin-bottom:20px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
+    <div class="brand-mark" style="width:40px;height:40px;border-radius:10px;margin-bottom:20px;background:var(--accent)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C8A850" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
     <h1>Export courses from Canvas</h1>
     <p>Connect with an admin token to see every course in your account, then export course content, people, grades and discussions in one go.</p>
     <div class="field">
@@ -240,7 +250,7 @@
 <div class="app hidden" id="appView">
   <header class="topbar">
     <div class="brand">
-      <div class="brand-mark"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
+      <div class="brand-mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#106030" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M5 21h14"/></svg></div>
       Canvas Course Exporter
     </div>
     <div class="conn"><i class="dot"></i><span id="who"></span></div>
